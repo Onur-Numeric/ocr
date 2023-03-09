@@ -8,19 +8,63 @@ from text_detection import east_text_detect_model
 DEFAULT_IMG_SAVE_DIR = 'capture'
 
 class image_processor:
-    def __init__(self, **kwargs) -> None:
-        self.text_box_detect = east_text_detect_model(kwargs)
+    def __init__(self, 
+                 image_preprocessor = None, text_box_detector = None,
+                 image_extracter = None, ocr_provider = None,
+                 **kwargs) -> None:
+        
+        if image_preprocessor is not None:
+            self.image_preprocessor = image_preprocessor
+        else:
+            self.image_preprocessor = None
+
+        if text_box_detector is not None:
+            self.text_box_detector = text_box_detector
+        else:
+            self.text_box_detector = east_text_detect_model(kwargs)
+
+        if image_extracter is not None:
+            self.image_extracter = image_extracter
+        else:
+            self.image_extracter = None
+        
+        if ocr_provider is not None:
+            self.ocr_provider = ocr_provider
+        else:
+            self.ocr_provider = None
+        
+        self.image_preprocess = lambda img : {'default': img}
+        self.text_box_detect = lambda img: self.text_box_detector.text_detection(img)
+        self.extract_postprocess_image = lambda img, box: self.image_extracter.extract_image(img, box)
+        self.gen_ocr_report = lambda img_list: self.ocr_provider.recognize(img_list)
 
     def process(self, original_img):
         # Step 1 - do any image preprocessing
-        pre_processed_img = original_img
+        pre_processed_imgs = self.image_preprocess(original_img)
         
         # Step 2 - do text detection
-        text_boxes = self.text_box_detect.text_detection(pre_processed_img)
+        text_boxes = {}
+        for label, img in pre_processed_imgs.items():
+            text_boxes[label] = self.text_box_detect(img)
+            
         if len(text_boxes) == 0:
             return
         
-        # Step 3 - whatever comes next
+        extracted_images = {}
+        for label, boxes in text_boxes.items():
+            if len(boxes) > 0:
+                img = pre_processed_imgs[label]
+                images = []
+                for box in boxes:
+                    images.append(self.extract_postprocess_image(img, box))
+                extracted_images[label] = images
+        
+        # Step 3 - finally get the ocr text
+        ocr_report = {}
+        for label, images in extracted_images.items():
+            ocr_report[label] = self.gen_ocr_report(images)
+            
+        return ocr_report
     
     '''
     # print("Text Detected"+ str(len(idxs)))
