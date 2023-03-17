@@ -1,7 +1,4 @@
 from time import sleep
-import numpy as np
-import cv2
-from PIL import Image as ImageConverter
 
 from text_detection import east_text_detect_model
 
@@ -21,7 +18,7 @@ class image_processor:
         if text_box_detector is not None:
             self.text_box_detector = text_box_detector
         else:
-            self.text_box_detector = east_text_detect_model(kwargs)
+            self.text_box_detector = east_text_detect_model(**kwargs)
 
         if image_extracter is not None:
             self.image_extracter = image_extracter
@@ -34,7 +31,7 @@ class image_processor:
             self.ocr_provider = None
         
         self.image_preprocess = lambda img : {'default': img}
-        self.text_box_detect = lambda img: self.text_box_detector.text_detection(img)
+        self.text_box_detect = lambda img: self.text_box_detector.detect(img)
         self.extract_postprocess_image = lambda img, box: self.image_extracter.extract_image(img, box)
         self.gen_ocr_report = lambda img_list: self.ocr_provider.recognize(img_list)
 
@@ -43,28 +40,34 @@ class image_processor:
         pre_processed_imgs = self.image_preprocess(original_img)
         
         # Step 2 - do text detection
-        text_boxes = {}
+        report = {}
         for label, img in pre_processed_imgs.items():
-            text_boxes[label] = self.text_box_detect(img)
+            text_boxes = self.text_box_detect(img)
             
-        if len(text_boxes) == 0:
-            return
-        
-        extracted_images = {}
-        for label, boxes in text_boxes.items():
-            if len(boxes) > 0:
-                img = pre_processed_imgs[label]
-                images = []
-                for box in boxes:
-                    images.append(self.extract_postprocess_image(img, box))
-                extracted_images[label] = images
-        
-        # Step 3 - finally get the ocr text
-        ocr_report = {}
-        for label, images in extracted_images.items():
-            ocr_report[label] = self.gen_ocr_report(images)
+            if len(text_boxes) == 0:
+                return
             
-        return ocr_report
+            label_report = {
+                'img': img, 
+                'text_boxes': text_boxes, 
+                'extracted': [],
+                'ocr': []
+            }
+            
+            for box in label_report['text_boxes'].items():
+                # Step 3 - draw a box around each test area
+                if self.text_highlighter:
+                    self.text_highlighter.highlight(img, box)
+                
+                extracted = self.extract(img, box)
+                ocr = self.recognize(extracted)
+                
+                label_report['extracted'].append(extracted)
+                label_report['ocr'].append(ocr)
+                
+            report[label] = label_report
+            
+        return report ## {label1: {img: {}, text_boxes: [], extracted: [], text: []}}
     
     '''
     # print("Text Detected"+ str(len(idxs)))

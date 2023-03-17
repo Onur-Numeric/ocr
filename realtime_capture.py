@@ -54,11 +54,11 @@ def frame_processor():
             frame_snapshot = frame.copy() # copy the current frame if required
             frame_mutex.release()
             
-            if show_preview:
-                cv2.imshow('preview', frame_snapshot)
-            
             # TODO - do the text detect magic here
-            process(frame_snapshot)
+            highlighted_frame = process(frame_snapshot)
+            
+            if show_preview:
+                cv2.imshow('preview', highlighted_frame)
              
             if cv2.waitKey(1) == ord('q'):
                 keep_going = False

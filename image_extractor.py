@@ -1,21 +1,33 @@
+import argparse
+from threading import Thread, Lock
+from time import sleep
+import numpy as np
+import cv2
 import keras_ocr
+from PIL import Image as ImageConverter
+from pyimagesearch.east import EAST_OUTPUT_LAYERS
+from pyimagesearch.east import decode_predictions
 
-class keras_ocr_ocr:
-    
+class image_extractor:
     def __init__(self) -> None:
-        self.pipeline = keras_ocr.pipeline.Pipeline()
         pass
     
-    def ocr(self, img):
-        return self.pipeline.recognize(img)
-     
-'''   
+    def extract(img, box):
+        cv2.polylines(img, [box], True, (0, 255, 0), 2)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        image1 = gray[min([box[0, 1], box[1, 1], box[2, 1], box[3, 1]])-20:max([box[0, 1], box[1, 1], box[2, 1], box[3, 1]])+20,
+                                  min([box[0, 0], box[1, 0], box[2, 0], box[3, 0]])-20:max([box[0, 0], box[1, 0], box[2, 0], box[3, 0]])+20]
+        return cv2.cvtColor(image1, cv2.COLOR_GRAY2RGB)
+
+'''
 keep_going = True
 frame = None
 frame_mutex = Lock()
 
 IMG_SAVE_DIR = 'capture'
 
+pipeline = keras_ocr.pipeline.Pipeline()
+net = None
 
 # initialize the original frame dimensions, new frame dimensions,
 # and ratio between the dimensions

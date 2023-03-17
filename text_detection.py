@@ -17,10 +17,6 @@ class east_text_detect_model:
         
         # load the pre-trained EAST text detector
         print("[INFO] loading EAST text detector...")
-        self.net = cv2.dnn.readNet(kwargs["model_path"])
-
-        # load the pre-trained EAST text detector
-        print("[INFO] loading EAST text detector...")
         self.net = cv2.dnn.readNet(kwargs["east"])
 
         # check if we are going to use GPU
@@ -33,7 +29,7 @@ class east_text_detect_model:
             # otherwise we are using our CPU
             print("[INFO] using CPU for inference...")
 
-    def text_detection(self, img):
+    def detect(self, img):
         # create blob from image
         blob = cv2.dnn.blobFromImage(
             img, 1.0, self.model_cnn_size,
